@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Sample data for lab tests
 const labTests = [
@@ -43,6 +44,8 @@ const LabTestBooking = () => {
     message: '',
   });
 
+  const [loading, setLoading] = useState(false);
+
   // Static available times
   const availableTimes = [
     '9:00 AM',
@@ -59,15 +62,64 @@ const LabTestBooking = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add your API call logic here
-    alert('Lab Test appointment booked successfully!');
-    console.log('Form Data:', formData);
+    setLoading(true);
+
+    // Form validation
+    if (!formData.name || !formData.email || !formData.phone || !formData.labTest || !formData.date || !formData.time) {
+      toast.error('Please fill in all required fields.');
+      setLoading(false);
+      return;
+    }
+
+    const phonePattern = /^[0-9]{10}$/;
+    if (!phonePattern.test(formData.phone)) {
+      toast.error('Please enter a valid phone number.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Update the API URL to match backend URL and port
+      const apiUrl = 'http://localhost:5000/api/labtest/bookings';
+
+      // Make an API call
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        // Notify success
+        toast.success('Lab test appointment booked successfully!');
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          labTest: '',
+          date: '',
+          time: '',
+          message: '',
+        });
+      } else {
+        // Notify failure
+        toast.error('Failed to book appointment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error booking appointment:', error);
+      toast.error('An error occurred. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="container mx-auto px-4 py-6">
+      <Toaster /> {/* Add this to display toasts */}
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Book a Lab Test</h1>
       <p className="mt-2 text-gray-600 text-sm sm:text-base">
         Fill out the form below to book a lab test. Choose the test, time, and provide your details.
@@ -115,6 +167,8 @@ const LabTestBooking = () => {
               onChange={handleChange}
               required
               className="mt-1 px-4 py-2 border rounded-lg"
+              pattern="[0-9]{10}"
+              placeholder="1234567890"
             />
           </div>
 
@@ -189,9 +243,10 @@ const LabTestBooking = () => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full mt-6 px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-700"
+          className={`w-full mt-6 px-6 py-3 ${loading ? 'bg-gray-400' : 'bg-blue-500'} text-white rounded-full hover:bg-blue-700`}
+          disabled={loading}
         >
-          Book Lab Test
+          {loading ? 'Booking...' : 'Book Lab Test'}
         </button>
       </form>
     </div>
